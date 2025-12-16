@@ -1,0 +1,138 @@
+{
+    "categories": [
+        {
+            "id": 1,
+            "name": "Завтрак"
+        },
+        {
+            "id": 2,
+            "name": "Обед"
+        },
+        {
+            "id": 3,
+            "name": "Перекус"
+        }
+    ],
+    "meals": [
+        {
+            "categoryId": 3,
+            "id": 1,
+            "name": "Компот",
+            "price": 30
+        },
+        {
+            "categoryId": 3,
+            "id": 2,
+            "name": "Чай",
+            "price": 15
+        },
+        {
+            "categoryId": 2,
+            "id": 3,
+            "name": "Суп с горохом",
+            "price": 60
+        },
+        {
+            "categoryId": 2,
+            "id": 4,
+            "name": "Суп с фрикадельками",
+            "price": 80
+        },
+        {
+            "categoryId": 1,
+            "id": 5,
+            "name": "Омлет с ракушками",
+            "price": 60
+        }
+    ],
+    "orders": [
+        {
+            "date": "2025-12-16",
+            "id": 1,
+            "meals": [
+                {
+                    "mealId": 5,
+                    "quantity": 1
+                }
+            ],
+            "totalPrice": 60,
+            "userId": 2
+        },
+        {
+            "date": "2025-12-16",
+            "id": 2,
+            "meals": [
+                {
+                    "mealId": 2,
+                    "quantity": 1
+                },
+                {
+                    "mealId": 4,
+                    "quantity": 1
+                }
+            ],
+            "totalPrice": 95,
+            "userId": 2
+        },
+        {
+            "date": "2025-12-16",
+            "id": 3,
+            "meals": [
+                {
+                    "mealId": 3,
+                    "quantity": 1
+                },
+                {
+                    "mealId": 4,
+                    "quantity": 2
+                }
+            ],
+            "totalPrice": 220,
+            "userId": 2
+        },
+        {
+            "date": "2025-12-16",
+            "id": 4,
+            "meals": [
+                {
+                    "mealId": 2,
+                    "quantity": 1
+                },
+                {
+                    "mealId": 1,
+                    "quantity": 1
+                },
+                {
+                    "mealId": 4,
+                    "quantity": 1
+                },
+                {
+                    "mealId": 3,
+                    "quantity": 1
+                },
+                {
+                    "mealId": 5,
+                    "quantity": 1
+                }
+            ],
+            "totalPrice": 245,
+            "userId": 2
+        }
+    ],
+    "users": [
+        {
+            "balance": 0,
+            "id": 1,
+            "password": "admin",
+            "type": 0,
+            "username": "admin"
+        },
+        {
+            "balance": 380,
+            "id": 2,
+            "password": "123",
+            "type": 1,
+            "username": "vostrik"
+        }
+    ]
+}
