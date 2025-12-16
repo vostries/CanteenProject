@@ -7,7 +7,14 @@
 #include <QHeaderView>
 #include <QMessageBox>
 #include <QDate>
+#include <QDateEdit>
 #include <QCloseEvent>
+#include <QPixmap>
+#include <QFileInfo>
+#include <QMouseEvent>
+#include <QApplication>
+#include <QEvent>
+#include <QLineEdit>
 
 StudentWindow::StudentWindow(User *user, QWidget *parent)
     : QMainWindow(parent)
@@ -22,6 +29,9 @@ StudentWindow::StudentWindow(User *user, QWidget *parent)
     refreshOrders();
     
     connect(m_orderObserver, &OrderObserver::balanceUpdated, this, &StudentWindow::onBalanceUpdated);
+    
+    // Устанавливаем фильтр событий для снятия выделения при клике вне таблиц
+    qApp->installEventFilter(this);
 }
 
 StudentWindow::~StudentWindow()
@@ -98,15 +108,17 @@ void StudentWindow::setupMenuTab()
     connect(m_priceFilterCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &StudentWindow::onFilterByCategory);
     connect(m_sortCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &StudentWindow::onSortMealsChanged);
     
-    // Таблица меню (без столбца ID)
-    m_mealsTable = new QTableWidget(0, 3, this);
-    m_mealsTable->setHorizontalHeaderLabels({"Название", "Цена", "Категория"});
+    // Таблица меню (без столбца ID, с фотографией)
+    m_mealsTable = new QTableWidget(0, 4, this);
+    m_mealsTable->setHorizontalHeaderLabels({"Фото", "Название", "Цена", "Категория"});
     m_mealsTable->setSelectionBehavior(QAbstractItemView::SelectRows);
     m_mealsTable->setSelectionMode(QAbstractItemView::SingleSelection);
     m_mealsTable->setEditTriggers(QAbstractItemView::NoEditTriggers); // Запрет редактирования
     m_mealsTable->horizontalHeader()->setStretchLastSection(true);
-    // Устанавливаем минимальную ширину столбца "Название" побольше
-    m_mealsTable->setColumnWidth(0, 250);
+    // Устанавливаем ширину столбцов
+    m_mealsTable->setColumnWidth(0, 80); // Фото
+    m_mealsTable->setColumnWidth(1, 250); // Название
+    m_mealsTable->verticalHeader()->setDefaultSectionSize(80); // Высота строк для фото
     mainLayout->addWidget(m_mealsTable);
     
     // Двойной щелчок для добавления в корзину
@@ -123,14 +135,16 @@ void StudentWindow::setupMenuTab()
     cartLabel->setFont(cartFont);
     mainLayout->addWidget(cartLabel);
     
-    m_cartTable = new QTableWidget(0, 3, this);
-    m_cartTable->setHorizontalHeaderLabels({"Название", "Цена", "Количество"});
+    m_cartTable = new QTableWidget(0, 4, this);
+    m_cartTable->setHorizontalHeaderLabels({"Фото", "Название", "Цена", "Количество"});
     m_cartTable->setSelectionBehavior(QAbstractItemView::SelectRows);
     m_cartTable->setSelectionMode(QAbstractItemView::SingleSelection);
     m_cartTable->setEditTriggers(QAbstractItemView::NoEditTriggers); // Запрет редактирования
     m_cartTable->horizontalHeader()->setStretchLastSection(true);
-    // Устанавливаем минимальную ширину столбца "Название" побольше
-    m_cartTable->setColumnWidth(0, 250);
+    // Устанавливаем ширину столбцов
+    m_cartTable->setColumnWidth(0, 80); // Фото
+    m_cartTable->setColumnWidth(1, 250); // Название
+    m_cartTable->verticalHeader()->setDefaultSectionSize(80); // Высота строк для фото
     mainLayout->addWidget(m_cartTable);
     
     QHBoxLayout *cartButtonLayout = new QHBoxLayout();
@@ -165,6 +179,19 @@ void StudentWindow::setupOrdersTab()
     titleLabel->setFont(titleFont);
     mainLayout->addWidget(titleLabel);
     
+    // Фильтр по дате
+    QHBoxLayout *filterLayout = new QHBoxLayout();
+    filterLayout->addWidget(new QLabel("Дата:"));
+    m_filterDateEdit = new QDateEdit();
+    m_filterDateEdit->setDate(QDate::currentDate());
+    m_filterDateEdit->setCalendarPopup(true);
+    filterLayout->addWidget(m_filterDateEdit);
+    
+    m_clearFilterButton = new QPushButton("Очистить");
+    filterLayout->addWidget(m_clearFilterButton);
+    filterLayout->addStretch();
+    mainLayout->addLayout(filterLayout);
+    
     m_myOrdersTable = new QTableWidget(0, 4, this);
     m_myOrdersTable->setHorizontalHeaderLabels({"ID", "Дата", "Блюда", "Сумма"});
     m_myOrdersTable->setEditTriggers(QAbstractItemView::NoEditTriggers); // Запрет редактирования
@@ -172,6 +199,10 @@ void StudentWindow::setupOrdersTab()
     // Устанавливаем минимальную ширину столбца "Блюда" побольше
     m_myOrdersTable->setColumnWidth(2, 300);
     mainLayout->addWidget(m_myOrdersTable);
+    
+    // Автоматическое применение фильтра при изменении даты
+    connect(m_filterDateEdit, &QDateEdit::dateChanged, this, &StudentWindow::onFilterOrders);
+    connect(m_clearFilterButton, &QPushButton::clicked, this, &StudentWindow::refreshOrders);
     
     m_tabWidget->addTab(m_ordersTab, "Мои заказы");
 }
@@ -201,16 +232,29 @@ void StudentWindow::refreshMeals()
     
     for (int i = 0; i < meals.size(); ++i) {
         const Meal &meal = meals[i];
+        
+        // Фото блюда
+        QTableWidgetItem *photoItem = new QTableWidgetItem();
+        photoItem->setFlags(photoItem->flags() & ~Qt::ItemIsEditable);
+        if (!meal.getImagePath().isEmpty() && QFileInfo::exists(meal.getImagePath())) {
+            QPixmap pixmap(meal.getImagePath());
+            if (!pixmap.isNull()) {
+                pixmap = pixmap.scaled(70, 70, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+                photoItem->setData(Qt::DecorationRole, pixmap);
+            }
+        }
+        m_mealsTable->setItem(i, 0, photoItem);
+        
         // Сохраняем ID в UserRole для использования в getSelectedMealId
         QTableWidgetItem *nameItem = new QTableWidgetItem(meal.getName());
         nameItem->setData(Qt::UserRole, meal.getId());
-        m_mealsTable->setItem(i, 0, nameItem);
+        m_mealsTable->setItem(i, 1, nameItem);
         
-        m_mealsTable->setItem(i, 1, new QTableWidgetItem(QString::number(meal.getPrice(), 'f', 2) + " руб."));
+        m_mealsTable->setItem(i, 2, new QTableWidgetItem(QString::number(meal.getPrice(), 'f', 2) + " руб."));
         
         Category *cat = dm.getCategoryById(meal.getCategoryId());
         QString catName = cat ? cat->getName() : "Неизвестно";
-        m_mealsTable->setItem(i, 2, new QTableWidgetItem(catName));
+        m_mealsTable->setItem(i, 3, new QTableWidgetItem(catName));
     }
 }
 
@@ -225,18 +269,31 @@ void StudentWindow::refreshCart()
         
         Meal *meal = dm.getMealById(mealId);
         if (meal) {
-            // Сохраняем ID в UserRole первой ячейки для использования в onRemoveFromCart
+            // Фото блюда
+            QTableWidgetItem *photoItem = new QTableWidgetItem();
+            photoItem->setFlags(photoItem->flags() & ~Qt::ItemIsEditable);
+            if (!meal->getImagePath().isEmpty() && QFileInfo::exists(meal->getImagePath())) {
+                QPixmap pixmap(meal->getImagePath());
+                if (!pixmap.isNull()) {
+                    pixmap = pixmap.scaled(70, 70, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+                    photoItem->setData(Qt::DecorationRole, pixmap);
+                }
+            }
+            m_cartTable->setItem(i, 0, photoItem);
+            
+            // Сохраняем ID в UserRole второй ячейки для использования в onRemoveFromCart
             QTableWidgetItem *nameItem = new QTableWidgetItem(meal->getName());
             nameItem->setData(Qt::UserRole, mealId);
-            m_cartTable->setItem(i, 0, nameItem);
+            m_cartTable->setItem(i, 1, nameItem);
             
-            m_cartTable->setItem(i, 1, new QTableWidgetItem(QString::number(meal->getPrice(), 'f', 2) + " руб."));
-            m_cartTable->setItem(i, 2, new QTableWidgetItem(QString::number(quantity)));
+            m_cartTable->setItem(i, 2, new QTableWidgetItem(QString::number(meal->getPrice(), 'f', 2) + " руб."));
+            m_cartTable->setItem(i, 3, new QTableWidgetItem(QString::number(quantity)));
         }
     }
     
-    // Восстанавливаем минимальную ширину столбца "Название" после обновления корзины
-    m_cartTable->setColumnWidth(0, 250);
+    // Восстанавливаем ширину столбцов после обновления корзины
+    m_cartTable->setColumnWidth(0, 80);
+    m_cartTable->setColumnWidth(1, 250);
     
     double total = calculateCartTotal();
     m_totalLabel->setText(QString("Итого: %1 руб.").arg(total, 0, 'f', 2));
@@ -244,8 +301,28 @@ void StudentWindow::refreshCart()
 
 void StudentWindow::refreshOrders()
 {
+    // Устанавливаем сегодняшнюю дату при нажатии "Очистить"
+    m_filterDateEdit->setDate(QDate::currentDate());
+    onFilterOrders();
+}
+
+void StudentWindow::onFilterOrders()
+{
     DataManager &dm = DataManager::getInstance();
     QList<Order> orders = dm.getOrdersByUserId(m_user->getId());
+    
+    QDate filterDate = m_filterDateEdit->date();
+    
+    // Фильтруем по дате, если дата установлена
+    if (filterDate.isValid()) {
+        QList<Order> filtered;
+        for (const Order &order : orders) {
+            if (order.getDate() == filterDate) {
+                filtered.append(order);
+            }
+        }
+        orders = filtered;
+    }
     
     // Сортируем по дате (новые сначала)
     std::sort(orders.begin(), orders.end(),
@@ -282,7 +359,7 @@ int StudentWindow::getSelectedMealId()
 {
     int row = m_mealsTable->currentRow();
     if (row >= 0) {
-        QTableWidgetItem *item = m_mealsTable->item(row, 0);
+        QTableWidgetItem *item = m_mealsTable->item(row, 1); // ID теперь в столбце "Название" (индекс 1)
         if (item) {
             return item->data(Qt::UserRole).toInt();
         }
@@ -340,16 +417,29 @@ void StudentWindow::onSearchMeals()
     
     for (int i = 0; i < filtered.size(); ++i) {
         const Meal &meal = filtered[i];
+        
+        // Фото блюда
+        QTableWidgetItem *photoItem = new QTableWidgetItem();
+        photoItem->setFlags(photoItem->flags() & ~Qt::ItemIsEditable);
+        if (!meal.getImagePath().isEmpty() && QFileInfo::exists(meal.getImagePath())) {
+            QPixmap pixmap(meal.getImagePath());
+            if (!pixmap.isNull()) {
+                pixmap = pixmap.scaled(70, 70, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+                photoItem->setData(Qt::DecorationRole, pixmap);
+            }
+        }
+        m_mealsTable->setItem(i, 0, photoItem);
+        
         // Сохраняем ID в UserRole для использования в getSelectedMealId
         QTableWidgetItem *nameItem = new QTableWidgetItem(meal.getName());
         nameItem->setData(Qt::UserRole, meal.getId());
-        m_mealsTable->setItem(i, 0, nameItem);
+        m_mealsTable->setItem(i, 1, nameItem);
         
-        m_mealsTable->setItem(i, 1, new QTableWidgetItem(QString::number(meal.getPrice(), 'f', 2) + " руб."));
+        m_mealsTable->setItem(i, 2, new QTableWidgetItem(QString::number(meal.getPrice(), 'f', 2) + " руб."));
         
         Category *cat = dm.getCategoryById(meal.getCategoryId());
         QString catName = cat ? cat->getName() : "Неизвестно";
-        m_mealsTable->setItem(i, 2, new QTableWidgetItem(catName));
+        m_mealsTable->setItem(i, 3, new QTableWidgetItem(catName));
     }
 }
 
@@ -387,16 +477,29 @@ void StudentWindow::onFilterByCategory()
     
     for (int i = 0; i < filtered.size(); ++i) {
         const Meal &meal = filtered[i];
+        
+        // Фото блюда
+        QTableWidgetItem *photoItem = new QTableWidgetItem();
+        photoItem->setFlags(photoItem->flags() & ~Qt::ItemIsEditable);
+        if (!meal.getImagePath().isEmpty() && QFileInfo::exists(meal.getImagePath())) {
+            QPixmap pixmap(meal.getImagePath());
+            if (!pixmap.isNull()) {
+                pixmap = pixmap.scaled(70, 70, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+                photoItem->setData(Qt::DecorationRole, pixmap);
+            }
+        }
+        m_mealsTable->setItem(i, 0, photoItem);
+        
         // Сохраняем ID в UserRole для использования в getSelectedMealId
         QTableWidgetItem *nameItem = new QTableWidgetItem(meal.getName());
         nameItem->setData(Qt::UserRole, meal.getId());
-        m_mealsTable->setItem(i, 0, nameItem);
+        m_mealsTable->setItem(i, 1, nameItem);
         
-        m_mealsTable->setItem(i, 1, new QTableWidgetItem(QString::number(meal.getPrice(), 'f', 2) + " руб."));
+        m_mealsTable->setItem(i, 2, new QTableWidgetItem(QString::number(meal.getPrice(), 'f', 2) + " руб."));
         
         Category *cat = dm.getCategoryById(meal.getCategoryId());
         QString catName = cat ? cat->getName() : "Неизвестно";
-        m_mealsTable->setItem(i, 2, new QTableWidgetItem(catName));
+        m_mealsTable->setItem(i, 3, new QTableWidgetItem(catName));
     }
 }
 
@@ -423,6 +526,9 @@ void StudentWindow::onAddToCart()
     }
     
     refreshCart();
+    
+    // Снимаем выделение после добавления в корзину
+    m_mealsTable->clearSelection();
 }
 
 void StudentWindow::onRemoveFromCart()
@@ -433,8 +539,8 @@ void StudentWindow::onRemoveFromCart()
         return;
     }
     
-    // Получаем ID из UserRole первой ячейки
-    QTableWidgetItem *item = m_cartTable->item(row, 0);
+    // Получаем ID из UserRole второй ячейки (столбец "Название")
+    QTableWidgetItem *item = m_cartTable->item(row, 1);
     if (!item) {
         QMessageBox::warning(this, "Ошибка", "Выберите блюдо из корзины");
         return;
@@ -515,5 +621,35 @@ void StudentWindow::onSortMealsChanged()
     }
     
     refreshMeals();
+}
+
+bool StudentWindow::eventFilter(QObject *obj, QEvent *event)
+{
+    // Снимаем выделение с таблиц при клике вне их
+    if (event->type() == QEvent::MouseButtonPress) {
+        QMouseEvent *mouseEvent = static_cast<QMouseEvent*>(event);
+        QWidget *clickedWidget = qApp->widgetAt(mouseEvent->globalPosition().toPoint());
+        
+        // Если клик был не по таблице меню и не по корзине, снимаем выделение
+        if (clickedWidget != m_mealsTable && clickedWidget != m_cartTable) {
+            // Проверяем, не является ли кликнутый виджет дочерним элементом таблиц
+            QWidget *parent = clickedWidget;
+            bool isChildOfTable = false;
+            while (parent) {
+                if (parent == m_mealsTable || parent == m_cartTable) {
+                    isChildOfTable = true;
+                    break;
+                }
+                parent = parent->parentWidget();
+            }
+            
+            if (!isChildOfTable) {
+                m_mealsTable->clearSelection();
+                m_cartTable->clearSelection();
+            }
+        }
+    }
+    
+    return QMainWindow::eventFilter(obj, event);
 }
 

@@ -102,3 +102,11 @@ QString OrdersByDateReportStrategy::generateReport(const QList<Order> &orders,
 }
 
 
+
+
+
+
+
+
+
+

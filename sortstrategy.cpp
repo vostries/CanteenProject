@@ -32,3 +32,11 @@ QList<Meal> SortByPriceDescendingStrategy::sort(const QList<Meal> &meals)
 }
 
 
+
+
+
+
+
+
+
+

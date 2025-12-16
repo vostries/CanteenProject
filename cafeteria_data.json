@@ -17,105 +17,45 @@
         {
             "categoryId": 3,
             "id": 1,
+            "imagePath": "/Users/vostrik/Downloads/020202.png",
             "name": "Компот",
-            "price": 30
+            "price": 25
         },
         {
-            "categoryId": 3,
+            "categoryId": 2,
             "id": 2,
-            "name": "Чай",
-            "price": 15
-        },
-        {
-            "categoryId": 2,
-            "id": 3,
-            "name": "Суп с горохом",
-            "price": 60
-        },
-        {
-            "categoryId": 2,
-            "id": 4,
+            "imagePath": "/Users/vostrik/Downloads/i.png",
             "name": "Суп с фрикадельками",
-            "price": 80
-        },
-        {
-            "categoryId": 1,
-            "id": 5,
-            "name": "Омлет с ракушками",
             "price": 60
         }
     ],
     "orders": [
         {
-            "date": "2025-12-16",
+            "date": "2025-12-17",
             "id": 1,
             "meals": [
                 {
-                    "mealId": 5,
+                    "mealId": 1,
+                    "quantity": 2
+                },
+                {
+                    "mealId": 2,
                     "quantity": 1
                 }
             ],
-            "totalPrice": 60,
+            "totalPrice": 110,
             "userId": 2
         },
         {
-            "date": "2025-12-16",
+            "date": "2025-12-17",
             "id": 2,
             "meals": [
                 {
-                    "mealId": 2,
-                    "quantity": 1
-                },
-                {
-                    "mealId": 4,
-                    "quantity": 1
-                }
-            ],
-            "totalPrice": 95,
-            "userId": 2
-        },
-        {
-            "date": "2025-12-16",
-            "id": 3,
-            "meals": [
-                {
-                    "mealId": 3,
-                    "quantity": 1
-                },
-                {
-                    "mealId": 4,
-                    "quantity": 2
-                }
-            ],
-            "totalPrice": 220,
-            "userId": 2
-        },
-        {
-            "date": "2025-12-16",
-            "id": 4,
-            "meals": [
-                {
-                    "mealId": 2,
-                    "quantity": 1
-                },
-                {
                     "mealId": 1,
                     "quantity": 1
-                },
-                {
-                    "mealId": 4,
-                    "quantity": 1
-                },
-                {
-                    "mealId": 3,
-                    "quantity": 1
-                },
-                {
-                    "mealId": 5,
-                    "quantity": 1
                 }
             ],
-            "totalPrice": 245,
+            "totalPrice": 25,
             "userId": 2
         }
     ],
@@ -128,7 +68,7 @@
             "username": "admin"
         },
         {
-            "balance": 380,
+            "balance": 865,
             "id": 2,
             "password": "123",
             "type": 1,

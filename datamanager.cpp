@@ -100,7 +100,8 @@ void DataManager::loadData()
             mealObj["id"].toInt(),
             mealObj["name"].toString(),
             mealObj["price"].toDouble(),
-            mealObj["categoryId"].toInt()
+            mealObj["categoryId"].toInt(),
+            mealObj.contains("imagePath") ? mealObj["imagePath"].toString() : QString()
         );
         m_meals.append(meal);
         if (meal.getId() >= m_nextMealId) {
@@ -398,7 +399,8 @@ bool DataManager::importMenu(const QString &filename)
                 mealObj["id"].toInt(),
                 mealObj["name"].toString(),
                 mealObj["price"].toDouble(),
-                mealObj["categoryId"].toInt()
+                mealObj["categoryId"].toInt(),
+                mealObj.contains("imagePath") ? mealObj["imagePath"].toString() : QString()
             );
             
             bool exists = false;

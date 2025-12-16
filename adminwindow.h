@@ -34,6 +34,7 @@ public:
 
 protected:
     void closeEvent(QCloseEvent *event) override;
+    bool eventFilter(QObject *obj, QEvent *event) override;
 
 private slots:
     void onAddMeal();
@@ -48,6 +49,7 @@ private slots:
     void onGenerateOrdersByDateReport();
     void onExportMenu();
     void onImportMenu();
+    void onExportOrders();
     void onSortMealsChanged();
     void onMealCellChanged(int row, int column);
 
@@ -65,6 +67,9 @@ private:
     QLineEdit *m_mealNameEdit;
     QDoubleSpinBox *m_mealPriceSpin;
     QComboBox *m_mealCategoryCombo;
+    QLineEdit *m_mealImagePathEdit;
+    QPushButton *m_selectImageButton;
+    QLabel *m_imagePreview;
     QPushButton *m_addMealButton;
     QPushButton *m_editMealButton;
     QPushButton *m_deleteMealButton;
@@ -78,6 +83,8 @@ private:
     QDateEdit *m_filterDateEdit;
     QLineEdit *m_filterUserEdit;
     QPushButton *m_clearFilterButton;
+    QPushButton *m_exportOrdersButton;
+    QList<Order> m_filteredOrders; // Список отфильтрованных заказов
     
     // Tab 3: Отчеты
     QWidget *m_reportsTab;
@@ -94,6 +101,7 @@ private:
     void loadMeals();
     void loadOrders();
     int getSelectedMealId();
+    void clearMealForm();
 };
 
 #endif // ADMINWINDOW_H

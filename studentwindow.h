@@ -7,6 +7,7 @@
 #include <QLineEdit>
 #include <QComboBox>
 #include <QSpinBox>
+#include <QDateEdit>
 #include <QLabel>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -29,6 +30,7 @@ public:
 
 protected:
     void closeEvent(QCloseEvent *event) override;
+    bool eventFilter(QObject *obj, QEvent *event) override;
 
 private slots:
     void onSearchMeals();
@@ -39,6 +41,7 @@ private slots:
     void refreshMeals();
     void refreshCart();
     void refreshOrders();
+    void onFilterOrders();
     void updateBalance();
     void onBalanceUpdated(int userId, double newBalance);
     void onSortMealsChanged();
@@ -68,6 +71,8 @@ private:
     // Tab 2: Мои заказы
     QWidget *m_ordersTab;
     QTableWidget *m_myOrdersTable;
+    QDateEdit *m_filterDateEdit;
+    QPushButton *m_clearFilterButton;
     
     QList<QPair<int, int>> m_cart; // mealId, quantity
     

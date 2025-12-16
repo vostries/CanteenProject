@@ -2,8 +2,8 @@
 #include <QJsonObject>
 #include <QJsonDocument>
 
-Meal::Meal(int id, const QString &name, double price, int categoryId)
-    : m_id(id), m_name(name), m_price(price), m_categoryId(categoryId)
+Meal::Meal(int id, const QString &name, double price, int categoryId, const QString &imagePath)
+    : m_id(id), m_name(name), m_price(price), m_categoryId(categoryId), m_imagePath(imagePath)
 {
 }
 
@@ -14,6 +14,7 @@ QString Meal::toJson() const
     obj["name"] = m_name;
     obj["price"] = m_price;
     obj["categoryId"] = m_categoryId;
+    obj["imagePath"] = m_imagePath;
     
     QJsonDocument doc(obj);
     return doc.toJson(QJsonDocument::Compact);
@@ -28,8 +29,12 @@ Meal Meal::fromJson(const QString &json)
         obj["id"].toInt(),
         obj["name"].toString(),
         obj["price"].toDouble(),
-        obj["categoryId"].toInt()
+        obj["categoryId"].toInt(),
+        obj.contains("imagePath") ? obj["imagePath"].toString() : QString()
     );
 }
+
+
+
 
 

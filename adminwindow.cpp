@@ -6,6 +6,18 @@
 #include <QMessageBox>
 #include <QFileDialog>
 #include <QCloseEvent>
+#include <QPixmap>
+#include <QFrame>
+#include <QFileInfo>
+#include <QLineEdit>
+#include <QJsonObject>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QFile>
+#include <QIODevice>
+#include <QDate>
+#include <QMouseEvent>
+#include <QApplication>
 
 AdminWindow::AdminWindow(User *user, QWidget *parent)
     : QMainWindow(parent)
@@ -41,6 +53,9 @@ void AdminWindow::setupUI()
     setupMenuTab();
     setupOrdersTab();
     setupReportsTab();
+    
+    // Устанавливаем фильтр событий для снятия выделения при клике вне таблицы
+    qApp->installEventFilter(this);
     
     resize(1000, 700);
 }
@@ -98,7 +113,23 @@ void AdminWindow::setupMenuTab()
     m_mealCategoryCombo = new QComboBox();
     formLayout->addWidget(m_mealCategoryCombo);
     
+    // Выбор изображения для блюда
+    formLayout->addWidget(new QLabel("Фото:"));
+    m_mealImagePathEdit = new QLineEdit();
+    m_mealImagePathEdit->setReadOnly(true);
+    formLayout->addWidget(m_mealImagePathEdit);
+    
+    m_selectImageButton = new QPushButton("Выбрать...");
+    formLayout->addWidget(m_selectImageButton);
+    
     mainLayout->addLayout(formLayout);
+    
+    // Превью изображения
+    m_imagePreview = new QLabel();
+    m_imagePreview->setFixedSize(80, 80);
+    m_imagePreview->setScaledContents(true);
+    m_imagePreview->setFrameShape(QFrame::StyledPanel);
+    mainLayout->addWidget(m_imagePreview);
     
     // Кнопки
     QHBoxLayout *buttonLayout = new QHBoxLayout();
@@ -124,6 +155,16 @@ void AdminWindow::setupMenuTab()
     connect(m_deleteMealButton, &QPushButton::clicked, this, &AdminWindow::onDeleteMeal);
     connect(m_exportMenuButton, &QPushButton::clicked, this, &AdminWindow::onExportMenu);
     connect(m_importMenuButton, &QPushButton::clicked, this, &AdminWindow::onImportMenu);
+    connect(m_selectImageButton, &QPushButton::clicked, [this]() {
+        QString filename = QFileDialog::getOpenFileName(this, "Выбор изображения блюда", "", "Изображения (*.png *.jpg *.jpeg *.bmp)");
+        if (!filename.isEmpty()) {
+            m_mealImagePathEdit->setText(filename);
+            QPixmap pix(filename);
+            if (!pix.isNull()) {
+                m_imagePreview->setPixmap(pix);
+            }
+        }
+    });
     
     m_tabWidget->addTab(m_menuTab, "Управление меню");
 }
@@ -148,6 +189,8 @@ void AdminWindow::setupOrdersTab()
     
     m_clearFilterButton = new QPushButton("Очистить");
     filterLayout->addWidget(m_clearFilterButton);
+    m_exportOrdersButton = new QPushButton("Экспорт в JSON");
+    filterLayout->addWidget(m_exportOrdersButton);
     filterLayout->addStretch();
     mainLayout->addLayout(filterLayout);
     
@@ -163,6 +206,7 @@ void AdminWindow::setupOrdersTab()
     connect(m_filterDateEdit, &QDateEdit::dateChanged, this, &AdminWindow::onFilterOrders);
     connect(m_filterUserEdit, &QLineEdit::textChanged, this, &AdminWindow::onFilterOrders);
     connect(m_clearFilterButton, &QPushButton::clicked, this, &AdminWindow::refreshOrders);
+    connect(m_exportOrdersButton, &QPushButton::clicked, this, &AdminWindow::onExportOrders);
     
     m_tabWidget->addTab(m_ordersTab, "Заказы");
 }
@@ -248,6 +292,9 @@ void AdminWindow::loadOrders()
     DataManager &dm = DataManager::getInstance();
     QList<Order> orders = dm.getOrders();
     
+    // Сохраняем все заказы для экспорта
+    m_filteredOrders = orders;
+    
     m_ordersTable->setRowCount(orders.size());
     
     for (int i = 0; i < orders.size(); ++i) {
@@ -306,7 +353,23 @@ void AdminWindow::onMealSelectionChanged()
             if (index >= 0) {
                 m_mealCategoryCombo->setCurrentIndex(index);
             }
+            
+            // Загружаем изображение
+            m_mealImagePathEdit->setText(meal->getImagePath());
+            if (!meal->getImagePath().isEmpty() && QFileInfo::exists(meal->getImagePath())) {
+                QPixmap pix(meal->getImagePath());
+                if (!pix.isNull()) {
+                    m_imagePreview->setPixmap(pix.scaled(80, 80, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+                } else {
+                    m_imagePreview->clear();
+                }
+            } else {
+                m_imagePreview->clear();
+            }
         }
+    } else {
+        // Очищаем форму при отсутствии выбора
+        clearMealForm();
     }
 }
 
@@ -315,6 +378,7 @@ void AdminWindow::onAddMeal()
     QString name = m_mealNameEdit->text().trimmed();
     double price = m_mealPriceSpin->value();
     int categoryId = m_mealCategoryCombo->currentData().toInt();
+    QString imagePath = m_mealImagePathEdit->text().trimmed();
     
     if (name.isEmpty()) {
         QMessageBox::warning(this, "Ошибка", "Введите название блюда");
@@ -322,11 +386,11 @@ void AdminWindow::onAddMeal()
     }
     
     DataManager &dm = DataManager::getInstance();
-    Meal meal(dm.getNextMealId(), name, price, categoryId);
+    Meal meal(dm.getNextMealId(), name, price, categoryId, imagePath);
     dm.addMeal(meal);
     
-    m_mealNameEdit->clear();
-    m_mealPriceSpin->setValue(0.0);
+    // Очищаем форму после добавления
+    clearMealForm();
     refreshMeals();
 }
 
@@ -338,6 +402,7 @@ void AdminWindow::onEditMeal()
     QString name = m_mealNameEdit->text().trimmed();
     double price = m_mealPriceSpin->value();
     int categoryId = m_mealCategoryCombo->currentData().toInt();
+    QString imagePath = m_mealImagePathEdit->text().trimmed();
     
     if (name.isEmpty()) {
         QMessageBox::warning(this, "Ошибка", "Введите название блюда");
@@ -350,8 +415,11 @@ void AdminWindow::onEditMeal()
         meal->setName(name);
         meal->setPrice(price);
         meal->setCategoryId(categoryId);
+        meal->setImagePath(imagePath);
         dm.updateMeal(*meal);
         refreshMeals();
+        // Очищаем форму после редактирования
+        clearMealForm();
     }
 }
 
@@ -425,6 +493,9 @@ void AdminWindow::onFilterOrders()
         }
     }
     
+    // Сохраняем отфильтрованные заказы для экспорта
+    m_filteredOrders = filtered;
+    
     m_ordersTable->setRowCount(filtered.size());
     
     for (int i = 0; i < filtered.size(); ++i) {
@@ -490,6 +561,83 @@ void AdminWindow::onExportMenu()
         } else {
             QMessageBox::warning(this, "Ошибка", "Не удалось экспортировать меню");
         }
+    }
+}
+
+void AdminWindow::onExportOrders()
+{
+    if (m_filteredOrders.isEmpty()) {
+        QMessageBox::warning(this, "Ошибка", "Нет заказов для экспорта");
+        return;
+    }
+    
+    QString filename = QFileDialog::getSaveFileName(this, "Экспорт заказов", "", "JSON Files (*.json)");
+    if (filename.isEmpty()) {
+        return;
+    }
+    
+    DataManager &dm = DataManager::getInstance();
+    QJsonArray ordersArray;
+    
+    for (const Order &order : m_filteredOrders) {
+        QJsonObject orderObj;
+        orderObj["id"] = order.getId();
+        orderObj["userId"] = order.getUserId();
+        orderObj["date"] = order.getDate().toString(Qt::ISODate);
+        orderObj["totalPrice"] = order.getTotalPrice();
+        
+        // Добавляем информацию о пользователе
+        User *user = dm.getUserById(order.getUserId());
+        if (user) {
+            QJsonObject userObj;
+            userObj["id"] = user->getId();
+            userObj["username"] = user->getUsername();
+            orderObj["user"] = userObj;
+        }
+        
+        // Добавляем информацию о блюдах
+        QJsonArray mealsArray;
+        for (const auto &mealPair : order.getMeals()) {
+            Meal *meal = dm.getMealById(mealPair.first);
+            if (meal) {
+                QJsonObject mealObj;
+                mealObj["id"] = meal->getId();
+                mealObj["name"] = meal->getName();
+                mealObj["price"] = meal->getPrice();
+                mealObj["quantity"] = mealPair.second;
+                
+                // Добавляем информацию о категории
+                Category *category = dm.getCategoryById(meal->getCategoryId());
+                if (category) {
+                    QJsonObject categoryObj;
+                    categoryObj["id"] = category->getId();
+                    categoryObj["name"] = category->getName();
+                    mealObj["category"] = categoryObj;
+                }
+                
+                mealsArray.append(mealObj);
+            }
+        }
+        orderObj["meals"] = mealsArray;
+        
+        ordersArray.append(orderObj);
+    }
+    
+    QJsonObject rootObj;
+    rootObj["orders"] = ordersArray;
+    rootObj["totalOrders"] = ordersArray.size();
+    rootObj["exportDate"] = QDate::currentDate().toString(Qt::ISODate);
+    
+    QJsonDocument doc(rootObj);
+    
+    QFile file(filename);
+    if (file.open(QIODevice::WriteOnly)) {
+        file.write(doc.toJson(QJsonDocument::Indented));
+        file.close();
+        QMessageBox::information(this, "Успех", 
+            QString("Заказы успешно экспортированы (%1 заказов)").arg(m_filteredOrders.size()));
+    } else {
+        QMessageBox::warning(this, "Ошибка", "Не удалось сохранить файл");
     }
 }
 
@@ -577,5 +725,60 @@ void AdminWindow::onMealCellChanged(int row, int column)
     if (changed) {
         dm.updateMeal(*meal);
     }
+}
+
+bool AdminWindow::eventFilter(QObject *obj, QEvent *event)
+{
+    // Снимаем выделение с таблицы при клике вне ее и вне формы редактирования
+    if (event->type() == QEvent::MouseButtonPress) {
+        QMouseEvent *mouseEvent = static_cast<QMouseEvent*>(event);
+        QWidget *clickedWidget = qApp->widgetAt(mouseEvent->globalPosition().toPoint());
+        
+        // Проверяем, является ли кликнутый виджет частью таблицы или формы редактирования
+        bool isPartOfTableOrForm = false;
+        
+        // Список виджетов формы редактирования
+        QList<QWidget*> formWidgets = {
+            m_mealsTable,
+            m_mealNameEdit,
+            m_mealPriceSpin,
+            m_mealCategoryCombo,
+            m_mealImagePathEdit,
+            m_selectImageButton,
+            m_imagePreview,
+            m_addMealButton,
+            m_editMealButton,
+            m_deleteMealButton
+        };
+        
+        // Проверяем, не является ли кликнутый виджет одним из виджетов формы или их дочерним элементом
+        QWidget *parent = clickedWidget;
+        while (parent) {
+            if (formWidgets.contains(parent)) {
+                isPartOfTableOrForm = true;
+                break;
+            }
+            parent = parent->parentWidget();
+        }
+        
+        // Если клик был вне таблицы и формы редактирования, снимаем выделение и очищаем форму
+        if (!isPartOfTableOrForm) {
+            m_mealsTable->clearSelection();
+            // Очистка формы произойдет автоматически через onMealSelectionChanged(),
+            // но явно вызываем для гарантии
+            clearMealForm();
+        }
+    }
+    
+    return QMainWindow::eventFilter(obj, event);
+}
+
+void AdminWindow::clearMealForm()
+{
+    m_mealNameEdit->clear();
+    m_mealPriceSpin->setValue(0.0);
+    m_mealCategoryCombo->setCurrentIndex(0);
+    m_mealImagePathEdit->clear();
+    m_imagePreview->clear();
 }
 

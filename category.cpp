@@ -29,3 +29,11 @@ Category Category::fromJson(const QString &json)
 }
 
 
+
+
+
+
+
+
+
+

@@ -32,3 +32,11 @@ QString ReportManager::generateReport(const QList<Order> &orders,
 }
 
 
+
+
+
+
+
+
+
+

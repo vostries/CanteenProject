@@ -23,3 +23,11 @@ public:
 #endif // CATEGORYDELEGATE_H
 
 
+
+
+
+
+
+
+
+

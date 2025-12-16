@@ -14,3 +14,11 @@ void OrderObserver::notifyOrderPlaced(Order *order, User *user, double totalPric
 }
 
 
+
+
+
+
+
+
+
+
