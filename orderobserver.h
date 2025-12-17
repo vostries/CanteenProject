@@ -6,7 +6,6 @@
 
 class User;
 
-// Observer pattern - обновление баланса при оформлении заказа
 class OrderObserver : public QObject
 {
     Q_OBJECT
@@ -21,6 +20,11 @@ signals:
 };
 
 #endif // ORDEROBSERVER_H
+
+
+
+
+
 
 
 

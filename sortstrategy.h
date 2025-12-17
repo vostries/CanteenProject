@@ -4,7 +4,6 @@
 #include <QList>
 #include "meal.h"
 
-// Strategy pattern - разные стратегии сортировки
 class SortStrategy
 {
 public:
@@ -31,6 +30,11 @@ public:
 };
 
 #endif // SORTSTRATEGY_H
+
+
+
+
+
 
 
 

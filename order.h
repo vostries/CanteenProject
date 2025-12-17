@@ -27,7 +27,7 @@ private:
     int m_id;
     int m_userId;
     QDate m_date;
-    QList<QPair<int, int>> m_meals; // mealId, quantity
+    QList<QPair<int, int>> m_meals;
     double m_totalPrice;
 };
 

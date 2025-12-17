@@ -9,7 +9,6 @@
 
 class User;
 
-// Strategy pattern - разные стратегии формирования отчетов
 class ReportStrategy
 {
 public:

@@ -1,10 +1,17 @@
 #include "user.h"
 #include <QJsonObject>
 #include <QJsonDocument>
+#include <QCryptographicHash>
+#include <QRegularExpression>
 
 User::User(int id, const QString &username, const QString &password, UserType type, double balance)
-    : m_id(id), m_username(username), m_password(password), m_type(type), m_balance(balance)
+    : m_id(id), m_username(username), m_type(type), m_balance(balance)
 {
+    if (isHashed(password)) {
+        m_password = password;
+    } else {
+        m_password = hashPassword(password);
+    }
 }
 
 bool User::deductBalance(double amount)
@@ -16,9 +23,26 @@ bool User::deductBalance(double amount)
     return false;
 }
 
+QString User::hashPassword(const QString &password)
+{
+    QCryptographicHash hash(QCryptographicHash::Sha256);
+    hash.addData(password.toUtf8());
+    return hash.result().toHex();
+}
+
+bool User::isHashed(const QString &password)
+{
+    if (password.length() != 64) {
+        return false;
+    }
+    QRegularExpression hexRegex("^[0-9a-fA-F]{64}$");
+    return hexRegex.match(password).hasMatch();
+}
+
 bool User::verifyPassword(const QString &password) const
 {
-    return m_password == password;
+    QString hashedPassword = hashPassword(password);
+    return m_password == hashedPassword;
 }
 
 QString User::toJson() const
@@ -47,6 +71,10 @@ User User::fromJson(const QString &json)
         obj["balance"].toDouble()
     );
 }
+
+
+
+
 
 
 

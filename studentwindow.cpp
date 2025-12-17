@@ -30,7 +30,6 @@ StudentWindow::StudentWindow(User *user, QWidget *parent)
     
     connect(m_orderObserver, &OrderObserver::balanceUpdated, this, &StudentWindow::onBalanceUpdated);
     
-    // Устанавливаем фильтр событий для снятия выделения при клике вне таблиц
     qApp->installEventFilter(this);
 }
 
@@ -108,20 +107,17 @@ void StudentWindow::setupMenuTab()
     connect(m_priceFilterCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &StudentWindow::onFilterByCategory);
     connect(m_sortCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &StudentWindow::onSortMealsChanged);
     
-    // Таблица меню (без столбца ID, с фотографией)
     m_mealsTable = new QTableWidget(0, 4, this);
     m_mealsTable->setHorizontalHeaderLabels({"Фото", "Название", "Цена", "Категория"});
     m_mealsTable->setSelectionBehavior(QAbstractItemView::SelectRows);
     m_mealsTable->setSelectionMode(QAbstractItemView::SingleSelection);
     m_mealsTable->setEditTriggers(QAbstractItemView::NoEditTriggers); // Запрет редактирования
     m_mealsTable->horizontalHeader()->setStretchLastSection(true);
-    // Устанавливаем ширину столбцов
     m_mealsTable->setColumnWidth(0, 80); // Фото
     m_mealsTable->setColumnWidth(1, 250); // Название
     m_mealsTable->verticalHeader()->setDefaultSectionSize(80); // Высота строк для фото
     mainLayout->addWidget(m_mealsTable);
     
-    // Двойной щелчок для добавления в корзину
     connect(m_mealsTable, &QTableWidget::cellDoubleClicked, this, &StudentWindow::onAddToCart);
     
     m_addToCartButton = new QPushButton("Добавить в корзину");
@@ -141,7 +137,7 @@ void StudentWindow::setupMenuTab()
     m_cartTable->setSelectionMode(QAbstractItemView::SingleSelection);
     m_cartTable->setEditTriggers(QAbstractItemView::NoEditTriggers); // Запрет редактирования
     m_cartTable->horizontalHeader()->setStretchLastSection(true);
-    // Устанавливаем ширину столбцов
+
     m_cartTable->setColumnWidth(0, 80); // Фото
     m_cartTable->setColumnWidth(1, 250); // Название
     m_cartTable->verticalHeader()->setDefaultSectionSize(80); // Высота строк для фото
@@ -194,13 +190,11 @@ void StudentWindow::setupOrdersTab()
     
     m_myOrdersTable = new QTableWidget(0, 4, this);
     m_myOrdersTable->setHorizontalHeaderLabels({"ID", "Дата", "Блюда", "Сумма"});
-    m_myOrdersTable->setEditTriggers(QAbstractItemView::NoEditTriggers); // Запрет редактирования
+    m_myOrdersTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
     m_myOrdersTable->horizontalHeader()->setStretchLastSection(true);
-    // Устанавливаем минимальную ширину столбца "Блюда" побольше
     m_myOrdersTable->setColumnWidth(2, 300);
     mainLayout->addWidget(m_myOrdersTable);
     
-    // Автоматическое применение фильтра при изменении даты
     connect(m_filterDateEdit, &QDateEdit::dateChanged, this, &StudentWindow::onFilterOrders);
     connect(m_clearFilterButton, &QPushButton::clicked, this, &StudentWindow::refreshOrders);
     
@@ -245,7 +239,6 @@ void StudentWindow::refreshMeals()
         }
         m_mealsTable->setItem(i, 0, photoItem);
         
-        // Сохраняем ID в UserRole для использования в getSelectedMealId
         QTableWidgetItem *nameItem = new QTableWidgetItem(meal.getName());
         nameItem->setData(Qt::UserRole, meal.getId());
         m_mealsTable->setItem(i, 1, nameItem);
@@ -281,7 +274,6 @@ void StudentWindow::refreshCart()
             }
             m_cartTable->setItem(i, 0, photoItem);
             
-            // Сохраняем ID в UserRole второй ячейки для использования в onRemoveFromCart
             QTableWidgetItem *nameItem = new QTableWidgetItem(meal->getName());
             nameItem->setData(Qt::UserRole, mealId);
             m_cartTable->setItem(i, 1, nameItem);
@@ -291,7 +283,6 @@ void StudentWindow::refreshCart()
         }
     }
     
-    // Восстанавливаем ширину столбцов после обновления корзины
     m_cartTable->setColumnWidth(0, 80);
     m_cartTable->setColumnWidth(1, 250);
     
@@ -313,7 +304,6 @@ void StudentWindow::onFilterOrders()
     
     QDate filterDate = m_filterDateEdit->date();
     
-    // Фильтруем по дате, если дата установлена
     if (filterDate.isValid()) {
         QList<Order> filtered;
         for (const Order &order : orders) {
@@ -324,7 +314,6 @@ void StudentWindow::onFilterOrders()
         orders = filtered;
     }
     
-    // Сортируем по дате (новые сначала)
     std::sort(orders.begin(), orders.end(),
               [](const Order &a, const Order &b) {
                   return a.getDate() > b.getDate();
@@ -351,7 +340,6 @@ void StudentWindow::onFilterOrders()
         m_myOrdersTable->setItem(i, 3, new QTableWidgetItem(QString::number(order.getTotalPrice(), 'f', 2) + " руб."));
     }
     
-    // Восстанавливаем минимальную ширину столбца "Блюда" после загрузки данных
     m_myOrdersTable->setColumnWidth(2, 300);
 }
 
@@ -359,7 +347,7 @@ int StudentWindow::getSelectedMealId()
 {
     int row = m_mealsTable->currentRow();
     if (row >= 0) {
-        QTableWidgetItem *item = m_mealsTable->item(row, 1); // ID теперь в столбце "Название" (индекс 1)
+        QTableWidgetItem *item = m_mealsTable->item(row, 1);
         if (item) {
             return item->data(Qt::UserRole).toInt();
         }
@@ -408,7 +396,6 @@ void StudentWindow::onSearchMeals()
         }
     }
     
-    // Применяем сортировку
     if (m_sortStrategy) {
         filtered = m_sortStrategy->sort(filtered);
     }
@@ -418,7 +405,6 @@ void StudentWindow::onSearchMeals()
     for (int i = 0; i < filtered.size(); ++i) {
         const Meal &meal = filtered[i];
         
-        // Фото блюда
         QTableWidgetItem *photoItem = new QTableWidgetItem();
         photoItem->setFlags(photoItem->flags() & ~Qt::ItemIsEditable);
         if (!meal.getImagePath().isEmpty() && QFileInfo::exists(meal.getImagePath())) {
@@ -430,7 +416,6 @@ void StudentWindow::onSearchMeals()
         }
         m_mealsTable->setItem(i, 0, photoItem);
         
-        // Сохраняем ID в UserRole для использования в getSelectedMealId
         QTableWidgetItem *nameItem = new QTableWidgetItem(meal.getName());
         nameItem->setData(Qt::UserRole, meal.getId());
         m_mealsTable->setItem(i, 1, nameItem);
@@ -468,7 +453,6 @@ void StudentWindow::onFilterByCategory()
         }
     }
     
-    // Применяем сортировку
     if (m_sortStrategy) {
         filtered = m_sortStrategy->sort(filtered);
     }
@@ -490,7 +474,6 @@ void StudentWindow::onFilterByCategory()
         }
         m_mealsTable->setItem(i, 0, photoItem);
         
-        // Сохраняем ID в UserRole для использования в getSelectedMealId
         QTableWidgetItem *nameItem = new QTableWidgetItem(meal.getName());
         nameItem->setData(Qt::UserRole, meal.getId());
         m_mealsTable->setItem(i, 1, nameItem);
@@ -547,7 +530,6 @@ void StudentWindow::onRemoveFromCart()
     }
     int mealId = item->data(Qt::UserRole).toInt();
     
-    // Уменьшаем количество или удаляем
     for (int i = 0; i < m_cart.size(); ++i) {
         if (m_cart[i].first == mealId) {
             if (m_cart[i].second > 1) {
@@ -586,7 +568,7 @@ void StudentWindow::onPlaceOrder()
         Order order(dm.getNextOrderId(), m_user->getId(), QDate::currentDate(), m_cart);
         order.setTotalPrice(total);
         
-        // Используем Observer для обновления баланса
+        // Используем Observer для баланса
         m_orderObserver->notifyOrderPlaced(&order, m_user, total);
         
         dm.addOrder(order);
@@ -625,14 +607,11 @@ void StudentWindow::onSortMealsChanged()
 
 bool StudentWindow::eventFilter(QObject *obj, QEvent *event)
 {
-    // Снимаем выделение с таблиц при клике вне их
     if (event->type() == QEvent::MouseButtonPress) {
         QMouseEvent *mouseEvent = static_cast<QMouseEvent*>(event);
         QWidget *clickedWidget = qApp->widgetAt(mouseEvent->globalPosition().toPoint());
         
-        // Если клик был не по таблице меню и не по корзине, снимаем выделение
         if (clickedWidget != m_mealsTable && clickedWidget != m_cartTable) {
-            // Проверяем, не является ли кликнутый виджет дочерним элементом таблиц
             QWidget *parent = clickedWidget;
             bool isChildOfTable = false;
             while (parent) {

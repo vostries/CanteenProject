@@ -20,12 +20,9 @@ DataManager::DataManager()
     , m_nextOrderId(1)
     , m_nextCategoryId(1)
 {
-    // Определяем путь к файлу данных - сохраняем в корне проекта
-    // Ищем директорию проекта (там где CMakeLists.txt)
+
     QDir dir(QCoreApplication::applicationDirPath());
     
-    // Поднимаемся от исполняемого файла до корня проекта
-    // Ищем директорию с CMakeLists.txt, поднимаясь вверх по дереву
     QFileInfo cmakeFile(dir, "CMakeLists.txt");
     while (!cmakeFile.exists() && dir.cdUp() && !dir.isRoot()) {
         cmakeFile = QFileInfo(dir, "CMakeLists.txt");
@@ -33,7 +30,6 @@ DataManager::DataManager()
     
     m_dataFile = dir.absoluteFilePath("cafeteria_data.json");
     
-    // Инициализация базовых категорий
     m_categories.append(Category(1, "Завтрак"));
     m_categories.append(Category(2, "Обед"));
     m_categories.append(Category(3, "Перекус"));
@@ -46,10 +42,11 @@ void DataManager::loadData()
 {
     QFile file(m_dataFile);
     if (!file.open(QIODevice::ReadOnly)) {
-        // Создаем администратора по умолчанию
+        // При создании нового файла пароль будет захэширован в конструкторе User
         User admin(1, "admin", "admin", UserType::Admin, 0.0);
         m_users.append(admin);
         m_nextUserId = 2;
+        saveData();  // Сохраняем с захэшированным паролем
         return;
     }
     
@@ -59,15 +56,23 @@ void DataManager::loadData()
     QJsonDocument doc = QJsonDocument::fromJson(data);
     QJsonObject root = doc.object();
     
-    // Загрузка пользователей
     m_users.clear();
     QJsonArray usersArray = root["users"].toArray();
+    bool needsMigration = false;
     for (const auto &value : usersArray) {
         QJsonObject userObj = value.toObject();
+        QString password = userObj["password"].toString();
+        
+        // Миграция: если пароль не хэширован, хэшируем его
+        if (!User::isHashed(password)) {
+            password = User::hashPassword(password);
+            needsMigration = true;
+        }
+        
         User user(
             userObj["id"].toInt(),
             userObj["username"].toString(),
-            userObj["password"].toString(),
+            password,
             static_cast<UserType>(userObj["type"].toInt()),
             userObj["balance"].toDouble()
         );
@@ -75,6 +80,11 @@ void DataManager::loadData()
         if (user.getId() >= m_nextUserId) {
             m_nextUserId = user.getId() + 1;
         }
+    }
+    
+    // Сохраняем данные, если была миграция паролей
+    if (needsMigration) {
+        saveData();
     }
     
     // Загрузка категорий
@@ -147,7 +157,6 @@ void DataManager::saveData()
 {
     QJsonObject root;
     
-    // Сохранение пользователей
     QJsonArray usersArray;
     for (const User &user : m_users) {
         QJsonDocument doc = QJsonDocument::fromJson(user.toJson().toUtf8());
@@ -155,7 +164,6 @@ void DataManager::saveData()
     }
     root["users"] = usersArray;
     
-    // Сохранение категорий
     QJsonArray categoriesArray;
     for (const Category &cat : m_categories) {
         QJsonDocument doc = QJsonDocument::fromJson(cat.toJson().toUtf8());
@@ -163,7 +171,6 @@ void DataManager::saveData()
     }
     root["categories"] = categoriesArray;
     
-    // Сохранение блюд
     QJsonArray mealsArray;
     for (const Meal &meal : m_meals) {
         QJsonDocument doc = QJsonDocument::fromJson(meal.toJson().toUtf8());
@@ -171,7 +178,6 @@ void DataManager::saveData()
     }
     root["meals"] = mealsArray;
     
-    // Сохранение заказов
     QJsonArray ordersArray;
     for (const Order &order : m_orders) {
         QJsonDocument doc = QJsonDocument::fromJson(order.toJson().toUtf8());
@@ -367,7 +373,6 @@ bool DataManager::importMenu(const QString &filename)
     QJsonDocument doc = QJsonDocument::fromJson(data);
     QJsonObject root = doc.object();
     
-    // Импорт категорий
     if (root.contains("categories")) {
         QJsonArray categoriesArray = root["categories"].toArray();
         for (const auto &value : categoriesArray) {
@@ -390,7 +395,6 @@ bool DataManager::importMenu(const QString &filename)
         }
     }
     
-    // Импорт блюд
     if (root.contains("meals")) {
         QJsonArray mealsArray = root["meals"].toArray();
         for (const auto &value : mealsArray) {

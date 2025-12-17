@@ -11,7 +11,6 @@ int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
     
-    // Инициализация менеджера данных
     DataManager::getInstance();
     
     LoginWindow loginWindow;

@@ -57,7 +57,7 @@ private:
     User *m_user;
     ReportManager *m_reportManager;
     SortStrategy *m_sortStrategy;
-    bool m_isLoadingMeals; // Флаг для предотвращения обработки изменений во время загрузки
+    bool m_isLoadingMeals;
     
     QTabWidget *m_tabWidget;
     
@@ -84,7 +84,7 @@ private:
     QLineEdit *m_filterUserEdit;
     QPushButton *m_clearFilterButton;
     QPushButton *m_exportOrdersButton;
-    QList<Order> m_filteredOrders; // Список отфильтрованных заказов
+    QList<Order> m_filteredOrders;
     
     // Tab 3: Отчеты
     QWidget *m_reportsTab;

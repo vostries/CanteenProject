@@ -22,6 +22,9 @@ public:
   bool deductBalance(double amount);
 
   bool verifyPassword(const QString &password) const;
+  
+  static QString hashPassword(const QString &password);
+  static bool isHashed(const QString &password);
 
   QString toJson() const;
   static User fromJson(const QString &json);

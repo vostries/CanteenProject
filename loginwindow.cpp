@@ -115,7 +115,6 @@ void LoginWindow::onRegisterClicked()
     
     DataManager &dm = DataManager::getInstance();
     
-    // Проверяем, существует ли уже такой пользователь
     for (const User &u : dm.getUsers()) {
         if (u.getUsername() == username) {
             QMessageBox::warning(this, "Ошибка", "Пользователь с таким именем уже существует");
@@ -123,8 +122,7 @@ void LoginWindow::onRegisterClicked()
         }
     }
     
-    // Создаем нового пользователя-ученика
-    User newUser(dm.getNextUserId(), username, password, UserType::Student, 1000.0); // Начальный баланс 1000
+    User newUser(dm.getNextUserId(), username, password, UserType::Student, 1000.0);
     dm.addUser(newUser);
     
     QMessageBox::information(this, "Успех", "Регистрация выполнена успешно. Ваш начальный баланс: 1000 руб.");

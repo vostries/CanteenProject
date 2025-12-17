@@ -61,3 +61,8 @@ void CategoryDelegate::updateEditorGeometry(QWidget *editor,
 
 
 
+
+
+
+
+

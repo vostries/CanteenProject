@@ -68,13 +68,12 @@ private:
     QPushButton *m_placeOrderButton;
     QLabel *m_totalLabel;
     
-    // Tab 2: Мои заказы
     QWidget *m_ordersTab;
     QTableWidget *m_myOrdersTable;
     QDateEdit *m_filterDateEdit;
     QPushButton *m_clearFilterButton;
     
-    QList<QPair<int, int>> m_cart; // mealId, quantity
+    QList<QPair<int, int>> m_cart;
     
     void setupUI();
     void setupMenuTab();

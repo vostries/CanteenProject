@@ -54,7 +54,6 @@ void AdminWindow::setupUI()
     setupOrdersTab();
     setupReportsTab();
     
-    // Устанавливаем фильтр событий для снятия выделения при клике вне таблицы
     qApp->installEventFilter(this);
     
     resize(1000, 700);
@@ -84,10 +83,8 @@ void AdminWindow::setupMenuTab()
     m_mealsTable->setSelectionMode(QAbstractItemView::SingleSelection);
     m_mealsTable->setEditTriggers(QAbstractItemView::DoubleClicked | QAbstractItemView::SelectedClicked);
     m_mealsTable->horizontalHeader()->setStretchLastSection(true);
-    // Устанавливаем минимальную ширину столбца "Название" побольше
     m_mealsTable->setColumnWidth(1, 250);
     
-    // Делегат для категории
     CategoryDelegate *categoryDelegate = new CategoryDelegate(this);
     m_mealsTable->setItemDelegateForColumn(3, categoryDelegate);
     
@@ -198,11 +195,9 @@ void AdminWindow::setupOrdersTab()
     m_ordersTable = new QTableWidget(0, 6, this);
     m_ordersTable->setHorizontalHeaderLabels({"ID", "Дата", "ID ученика", "Логин", "Блюда", "Сумма"});
     m_ordersTable->horizontalHeader()->setStretchLastSection(true);
-    // Устанавливаем минимальную ширину столбца "Блюда" побольше
     m_ordersTable->setColumnWidth(4, 300);
     mainLayout->addWidget(m_ordersTable);
     
-    // Автоматическое применение фильтра при изменении даты и вводе текста
     connect(m_filterDateEdit, &QDateEdit::dateChanged, this, &AdminWindow::onFilterOrders);
     connect(m_filterUserEdit, &QLineEdit::textChanged, this, &AdminWindow::onFilterOrders);
     connect(m_clearFilterButton, &QPushButton::clicked, this, &AdminWindow::refreshOrders);
@@ -251,12 +246,11 @@ void AdminWindow::loadCategories()
 
 void AdminWindow::loadMeals()
 {
-    m_isLoadingMeals = true; // Блокируем обработку изменений
+    m_isLoadingMeals = true;
     
     DataManager &dm = DataManager::getInstance();
     QList<Meal> meals = dm.getMeals();
     
-    // Применяем сортировку
     if (m_sortStrategy) {
         meals = m_sortStrategy->sort(meals);
     }
@@ -266,7 +260,7 @@ void AdminWindow::loadMeals()
     for (int i = 0; i < meals.size(); ++i) {
         const Meal &meal = meals[i];
         QTableWidgetItem *idItem = new QTableWidgetItem(QString::number(meal.getId()));
-        idItem->setFlags(idItem->flags() & ~Qt::ItemIsEditable); // ID не редактируется
+        idItem->setFlags(idItem->flags() & ~Qt::ItemIsEditable);
         m_mealsTable->setItem(i, 0, idItem);
         
         m_mealsTable->setItem(i, 1, new QTableWidgetItem(meal.getName()));
@@ -277,14 +271,13 @@ void AdminWindow::loadMeals()
         Category *cat = dm.getCategoryById(meal.getCategoryId());
         QString catName = cat ? cat->getName() : "Неизвестно";
         QTableWidgetItem *catItem = new QTableWidgetItem(catName);
-        catItem->setData(Qt::UserRole, meal.getCategoryId()); // Сохраняем ID категории
+        catItem->setData(Qt::UserRole, meal.getCategoryId());
         m_mealsTable->setItem(i, 3, catItem);
     }
     
-    // Восстанавливаем минимальную ширину столбца "Название" после загрузки данных
     m_mealsTable->setColumnWidth(1, 250);
     
-    m_isLoadingMeals = false; // Разблокируем
+    m_isLoadingMeals = false;
 }
 
 void AdminWindow::loadOrders()
@@ -292,7 +285,6 @@ void AdminWindow::loadOrders()
     DataManager &dm = DataManager::getInstance();
     QList<Order> orders = dm.getOrders();
     
-    // Сохраняем все заказы для экспорта
     m_filteredOrders = orders;
     
     m_ordersTable->setRowCount(orders.size());
@@ -303,7 +295,6 @@ void AdminWindow::loadOrders()
         m_ordersTable->setItem(i, 1, new QTableWidgetItem(order.getDate().toString("dd.MM.yyyy")));
         m_ordersTable->setItem(i, 2, new QTableWidgetItem(QString::number(order.getUserId())));
         
-        // Получаем логин пользователя
         User *user = dm.getUserById(order.getUserId());
         QString username = user ? user->getUsername() : "Неизвестно";
         m_ordersTable->setItem(i, 3, new QTableWidgetItem(username));
@@ -322,7 +313,6 @@ void AdminWindow::loadOrders()
         m_ordersTable->setItem(i, 5, new QTableWidgetItem(QString::number(order.getTotalPrice(), 'f', 2) + " руб."));
     }
     
-    // Восстанавливаем минимальную ширину столбца "Блюда" после загрузки данных
     m_ordersTable->setColumnWidth(4, 300);
 }
 
@@ -368,7 +358,6 @@ void AdminWindow::onMealSelectionChanged()
             }
         }
     } else {
-        // Очищаем форму при отсутствии выбора
         clearMealForm();
     }
 }
@@ -389,7 +378,6 @@ void AdminWindow::onAddMeal()
     Meal meal(dm.getNextMealId(), name, price, categoryId, imagePath);
     dm.addMeal(meal);
     
-    // Очищаем форму после добавления
     clearMealForm();
     refreshMeals();
 }
@@ -418,7 +406,6 @@ void AdminWindow::onEditMeal()
         meal->setImagePath(imagePath);
         dm.updateMeal(*meal);
         refreshMeals();
-        // Очищаем форму после редактирования
         clearMealForm();
     }
 }
@@ -459,23 +446,19 @@ void AdminWindow::onFilterOrders()
     for (const Order &order : orders) {
         bool matches = true;
         
-        // Фильтр по дате - применяется всегда если установлена дата
         if (filterDate.isValid() && order.getDate() != filterDate) {
             matches = false;
         }
         
-        // Фильтр по ID или логину - применяется только если введено значение
         if (matches && !userFilterStr.isEmpty()) {
             bool matchesUser = false;
             
-            // Пробуем найти по ID
             bool ok;
             int filterUserId = userFilterStr.toInt(&ok);
             if (ok && order.getUserId() == filterUserId) {
                 matchesUser = true;
             }
             
-            // Пробуем найти по логину
             if (!matchesUser) {
                 User *user = dm.getUserById(order.getUserId());
                 if (user && user->getUsername().contains(userFilterStr, Qt::CaseInsensitive)) {
@@ -493,7 +476,6 @@ void AdminWindow::onFilterOrders()
         }
     }
     
-    // Сохраняем отфильтрованные заказы для экспорта
     m_filteredOrders = filtered;
     
     m_ordersTable->setRowCount(filtered.size());
@@ -504,7 +486,6 @@ void AdminWindow::onFilterOrders()
         m_ordersTable->setItem(i, 1, new QTableWidgetItem(order.getDate().toString("dd.MM.yyyy")));
         m_ordersTable->setItem(i, 2, new QTableWidgetItem(QString::number(order.getUserId())));
         
-        // Получаем логин пользователя
         User *user = dm.getUserById(order.getUserId());
         QString username = user ? user->getUsername() : "Неизвестно";
         m_ordersTable->setItem(i, 3, new QTableWidgetItem(username));
@@ -523,7 +504,6 @@ void AdminWindow::onFilterOrders()
         m_ordersTable->setItem(i, 5, new QTableWidgetItem(QString::number(order.getTotalPrice(), 'f', 2) + " руб."));
     }
     
-    // Восстанавливаем минимальную ширину столбца "Блюда" после фильтрации
     m_ordersTable->setColumnWidth(4, 300);
 }
 
@@ -729,15 +709,12 @@ void AdminWindow::onMealCellChanged(int row, int column)
 
 bool AdminWindow::eventFilter(QObject *obj, QEvent *event)
 {
-    // Снимаем выделение с таблицы при клике вне ее и вне формы редактирования
     if (event->type() == QEvent::MouseButtonPress) {
         QMouseEvent *mouseEvent = static_cast<QMouseEvent*>(event);
         QWidget *clickedWidget = qApp->widgetAt(mouseEvent->globalPosition().toPoint());
         
-        // Проверяем, является ли кликнутый виджет частью таблицы или формы редактирования
         bool isPartOfTableOrForm = false;
         
-        // Список виджетов формы редактирования
         QList<QWidget*> formWidgets = {
             m_mealsTable,
             m_mealNameEdit,
@@ -751,7 +728,6 @@ bool AdminWindow::eventFilter(QObject *obj, QEvent *event)
             m_deleteMealButton
         };
         
-        // Проверяем, не является ли кликнутый виджет одним из виджетов формы или их дочерним элементом
         QWidget *parent = clickedWidget;
         while (parent) {
             if (formWidgets.contains(parent)) {
@@ -761,11 +737,8 @@ bool AdminWindow::eventFilter(QObject *obj, QEvent *event)
             parent = parent->parentWidget();
         }
         
-        // Если клик был вне таблицы и формы редактирования, снимаем выделение и очищаем форму
         if (!isPartOfTableOrForm) {
             m_mealsTable->clearSelection();
-            // Очистка формы произойдет автоматически через onMealSelectionChanged(),
-            // но явно вызываем для гарантии
             clearMealForm();
         }
     }

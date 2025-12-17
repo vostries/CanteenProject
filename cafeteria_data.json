@@ -27,6 +27,27 @@
             "imagePath": "/Users/vostrik/Downloads/i.png",
             "name": "Суп с фрикадельками",
             "price": 60
+        },
+        {
+            "categoryId": 3,
+            "id": 3,
+            "imagePath": "/Users/vostrik/Downloads/22.png",
+            "name": "Сосиска в тесте",
+            "price": 50
+        },
+        {
+            "categoryId": 1,
+            "id": 4,
+            "imagePath": "/Users/vostrik/Downloads/33.jpg",
+            "name": "Каша пшенная",
+            "price": 100
+        },
+        {
+            "categoryId": 2,
+            "id": 5,
+            "imagePath": "/Users/vostrik/Downloads/55.jpg",
+            "name": "Паста с курицей",
+            "price": 300
         }
     ],
     "orders": [
@@ -57,20 +78,48 @@
             ],
             "totalPrice": 25,
             "userId": 2
+        },
+        {
+            "date": "2025-12-17",
+            "id": 3,
+            "meals": [
+                {
+                    "mealId": 2,
+                    "quantity": 5
+                },
+                {
+                    "mealId": 1,
+                    "quantity": 1
+                }
+            ],
+            "totalPrice": 325,
+            "userId": 2
+        },
+        {
+            "date": "2025-12-17",
+            "id": 4,
+            "meals": [
+                {
+                    "mealId": 5,
+                    "quantity": 1
+                }
+            ],
+            "totalPrice": 300,
+            "userId": 2
         }
     ],
     "users": [
         {
             "balance": 0,
             "id": 1,
-            "password": "admin",
+            "password": "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918",
             "type": 0,
             "username": "admin"
         },
         {
-            "balance": 865,
+            "balance": 240,
             "id": 2,
-            "password": "123",
+            "password": "a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3",
             "type": 1,
             "username": "vostrik"
         }
